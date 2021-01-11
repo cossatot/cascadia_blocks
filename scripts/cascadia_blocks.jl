@@ -31,7 +31,7 @@ function gsrm_vel_from_row(row, block)
     lat = pt[2]
     Oiler.VelocityVectorSphere(lon=lon, lat=lat, ve=row.e_vel,
         vn=row.n_vel, ee=row.e_err, en=row.n_err, name=row.station,
-        fix="1111", mov=string(block), vel_type="GNSS")
+        fix="na", mov=string(block), vel_type="GNSS")
 end
 
 function midas_vel_from_row(row, block)
@@ -44,7 +44,7 @@ function midas_vel_from_row(row, block)
         ee=row.na_ee_mm_yr,
         en=row.na_en_mm_yr,
         name=row.site,
-        fix="1111", mov=string(block), vel_type="GNSS")
+        fix="na", mov=string(block), vel_type="GNSS")
 end
 
 gnss_vels = []
@@ -63,8 +63,34 @@ for (i, block) in enumerate(midas_block_idx)
     end
 end
 gnss_vels = convert(Array{VelocityVectorSphere}, gnss_vels)
-# do tris
 
+
+# Fake JDF vel points
+jdf_pt_file = "../data/jdf_vel_pts.csv"
+jdf_pts = CSV.read(jdf_pt_file)
+
+# From DeMets et al 2010, pre-converted to Cartesian
+jdf_na_pole = Oiler.PoleCart(
+    x=5.915996643479488e-9,
+    y=1.486624308775784e-8,
+    z=-9.997991640995085e-9,
+    # ex=sqrt(103.05e-8),
+    # ey=sqrt(186.44e-8),
+    # ez=sqrt(259.51e-8),
+    # cxy=135.05e-8,
+    # cxz=-155.74e-8,
+    # cyz=-203.56e-8,
+    fix="na",
+    mov="c006"
+)
+
+jdf_vels = Oiler.BlockRotations.predict_block_vels(jdf_pts[:,:lon], 
+    jdf_pts[:,:lat], jdf_na_pole)
+
+
+jdf_vels = [Oiler.VelocityVectorSphere(vel; vel_type="GNSS") for vel in jdf_vels]
+
+# do tris
 function tri_from_feature(feat)
     tri = Oiler.Tris.Tri(
        p1=Float64.(feat["geometry"]["coordinates"][1][1]),
@@ -161,7 +187,7 @@ fault_vels = convert(Array{VelocityVectorSphere}, fault_vels)
 # fault_vels = reduce(vcat, fault_vels_)
 println("n faults: ", length(faults))
 
-vels = vcat(fault_vels, gnss_vels)
+vels = vcat(fault_vels, gnss_vels, jdf_vels)
 
 
 vel_groups = Oiler.group_vels_by_fix_mov(vels)
@@ -173,11 +199,13 @@ SOLVE
 """
 # poles, tri_rates = 
 results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
-     # tris=tris,
+     tris=tris,
      faults=faults,
-     # weighted=false,
+     weighted=true,
      sparse_lhs=true,
-     predict_vels=true
+     predict_vels=true,
+     check_closures=false,
+     pred_se=true
     );
 
 
@@ -192,6 +220,11 @@ pve = [v.ve for v in pred_vels]
 pvn = [v.vn for v in pred_vels]
 
 figure(figsize=(14, 14))
+
+for fault in faults
+    plot(fault.trace[:,1], fault.trace[:,2], "k-", lw=0.3)
+end
+
 quiver(glons, glats, ove, ovn, color="b", scale=300)
 quiver(glons, glats, pve, pvn, color="r", scale=300)
 axis("equal")
