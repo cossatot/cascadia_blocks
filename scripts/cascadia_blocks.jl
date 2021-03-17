@@ -10,7 +10,10 @@ using Oiler
 midas_vel_file = "../data/midas_vels.geojson"
 gsrm_vel_file = "../data/gsrm_na_rel.geojson"
 blocks_file = "../data/cascadia_blocks.geojson"
+# tris_file = "../data/reference_gbm_cascadia_tris.geojson"
 tris_file = "../data/cascadia_subduction_tris.geojson"
+#tris_file = "../data/graham_cascadia_subduction_tris.geojson"
+# tris_file = "../data/cascadia_subduction_tris_smaller.geojson"
 faults_file = "../data/cascadia_block_faults.geojson"
 
 midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
@@ -22,8 +25,10 @@ tri_json = JSON.parsefile(tris_file)
 
 
 # load GNSS data
-gsrm_block_idx = Oiler.IO.get_block_idx_for_points(gsrm_df, block_df)
-midas_block_idx = Oiler.IO.get_block_idx_for_points(midas_df, block_df)
+@info "getting GSRM idxs"
+#gsrm_block_idx = Oiler.IO.get_block_idx_for_points(gsrm_df, block_df, 2991)
+@info "getting MIDAS idxs"
+#midas_block_idx = Oiler.IO.get_block_idx_for_points(midas_df, block_df, 2991)
 
 function gsrm_vel_from_row(row, block)
     pt = Oiler.IO.get_coords_from_geom(row[:geometry])
@@ -96,7 +101,7 @@ function tri_from_feature(feat)
        p1=Float64.(feat["geometry"]["coordinates"][1][1]),
        p2=Float64.(feat["geometry"]["coordinates"][1][2]),
        p3=Float64.(feat["geometry"]["coordinates"][1][3]),
-       name=feat["properties"]["fid"]
+       name=string(feat["properties"]["fid"])
        )
 end
 
@@ -205,9 +210,11 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      sparse_lhs=true,
      predict_vels=true,
      check_closures=false,
-     pred_se=true
+     pred_se=false
     );
 
+pole_arr = collect(values(results["poles"]))
+pole_arr = [pole for pole in pole_arr if typeof(pole) == Oiler.PoleCart]
 
 obs_vels = [v["vel"] for v in Oiler.Utils.get_gnss_vels(vel_groups)]
 pred_vels = [v["vel"] for v in Oiler.Utils.get_gnss_vels(results["predicted_vels"])]
@@ -240,3 +247,9 @@ end
 
 CSV.write("/home/itchy/research/cascadia/cascadia_blocks/results/fault_slip_rate_pts.csv",
           fault_out_df)
+
+na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
+                                                string(block_df[i, :fid]))
+                for i in 1:size(block_df,1)]
+CSV.write("../results/na_rel_poles.csv", 
+            Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
