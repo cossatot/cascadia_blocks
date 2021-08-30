@@ -1,0 +1,19 @@
+{
+"type": "FeatureCollection",
+"name": "cascadia_geol_slip_rate_pts",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "dextral_rate": "55.2", "dextral_err": "9.2", "extension_rate": 0.0, "extension_err": 1.0, "source": "Brothers et al. 2020 EPSL", "notes": "Cluster 11", "fault_seg": "cf284", "include": true }, "geometry": { "type": "Point", "coordinates": [ -132.804993, 53.1413 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "53.5", "dextral_err": "5.9", "extension_rate": null, "extension_err": null, "source": "Brothers et al. 2020 EPSL", "notes": "Cluster 10", "fault_seg": "cf042", "include": true }, "geometry": { "type": "Point", "coordinates": [ -133.766007, 54.095402 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "57.1", "dextral_err": "8.3", "extension_rate": null, "extension_err": null, "source": "", "notes": "Cluster 9", "fault_seg": "cf042", "include": true }, "geometry": { "type": "Point", "coordinates": [ -133.968994, 54.291901 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "52.0", "dextral_err": "5.8", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 8", "fault_seg": "cf042", "include": true }, "geometry": { "type": "Point", "coordinates": [ -134.264999, 54.618 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "51.2", "dextral_err": "6.1", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 7", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -134.858994, 55.362202 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "54.2", "dextral_err": "6.1", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 6", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -134.979004, 55.4837 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "56.7", "dextral_err": "7.7", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 5", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -135.080002, 55.5919 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "54.1", "dextral_err": "7.0", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 4", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -135.201996, 55.723099 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "56.7", "dextral_err": "8.2", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 3", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -135.479996, 56.135502 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "50.0", "dextral_err": "9.9", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 2", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -135.806, 56.5826 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "54.4", "dextral_err": "10.0", "extension_rate": null, "extension_err": null, "source": null, "notes": "Cluster 1", "fault_seg": "cf071", "include": true }, "geometry": { "type": "Point", "coordinates": [ -136.157, 57.0026 ] } },
+{ "type": "Feature", "properties": { "dextral_rate": "52.9", "dextral_err": "3.2", "extension_rate": null, "extension_err": null, "source": null, "notes": "Yakobi Sea Valley", "fault_seg": "cf043", "include": true }, "geometry": { "type": "Point", "coordinates": [ -136.776993, 57.974499 ] } }
+]
+}

@@ -17,6 +17,8 @@ s_us_fault_file = "../../../us_faults/s_us_faults/s_us_faults.geojson"
 cascadia_geol_slip_rates_file = "../data/cascadia_geol_slip_rates.geojson"
 new_us_geol_rates_file = "../../../us_faults/s_us_faults/new_us_faults_geol_slip_rates.geojson"
 
+trench_faults_file = "../data/cascadia_trench_faults.geojson"
+
 # tris_file = "../data/cascadia_subduction_tris.geojson"
 tris_file = "../data/graham_cascadia_subduction_tris.geojson"
 faults_file = "../data/cascadia_block_faults.geojson"
@@ -25,7 +27,10 @@ midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
 gsrm_df = Oiler.IO.gis_vec_file_to_df(gsrm_vel_file)
 fault_df = Oiler.IO.gis_vec_file_to_df(faults_file)
 s_us_fault_df = Oiler.IO.gis_vec_file_to_df(s_us_fault_file)
-fault_df = vcat(fault_df, s_us_fault_df)
+
+trench_fault_df = Oiler.IO.gis_vec_file_to_df(trench_faults_file)
+
+fault_df = vcat(fault_df, s_us_fault_df, trench_fault_df)
 
 block_df = Oiler.IO.gis_vec_file_to_df(blocks_file)
 idl_block_df = Oiler.IO.gis_vec_file_to_df(idl_block_file)
@@ -87,7 +92,7 @@ jdf_vels = Oiler.BlockRotations.predict_block_vels(jdf_pts[:,:lon],
 
 
 jdf_vels = [Oiler.VelocityVectorSphere(vel; vel_type="GNSS") for vel in jdf_vels]
-jdf_vels = jdf_vels[1:10]
+jdf_vels = jdf_vels
 
 
 
@@ -183,7 +188,8 @@ faults = [row_to_fault(fault_df[i,:]) for i in 1:size(fault_df, 1)]
 # end
 
 
-faults = [fault for fault in faults if fault.fw != "c006"]
+#faults = [fault for fault in faults if fault.fw != "c006"]
+faults = [fault for fault in faults if fault.hw != "c_07"]
 # faults = [fault for fault in faults if (fault.name == "cf197") ⊻ (fault.fw != "c006")]
 
 # faults = map(feat_to_Fault, fault_json["features"]);
@@ -270,8 +276,8 @@ SOLVE
 """
 # poles, tri_rates = 
 results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
-     tris=tris,
-     #tris=[],
+     #tris=tris,
+     tris=[],
      faults=faults,
      tri_distance_weight=50.,
      tri_priors=true,
@@ -288,9 +294,9 @@ Oiler.IO.write_fault_results_to_gj(results,
     "../results/w_us_cascadia_fault_results.geojson";
     name="Western North America faults")
 
-Oiler.IO.write_tri_results_to_gj(tris, results,
-    "../results/cascadia_tri_results_sm.geojson";
-    name="Cascadia tri rates")
+#Oiler.IO.write_tri_results_to_gj(tris, results,
+#    "../results/cascadia_tri_results_sm.geojson";
+#    name="Cascadia tri rates")
 
 pole_arr = collect(values(results["poles"]))
 pole_arr = [pole for pole in pole_arr if typeof(pole) == Oiler.PoleCart]
@@ -307,33 +313,33 @@ pvn = [v.vn for v in pred_vels]
 
 figure(figsize=(14, 14))
 
-cm = get_cmap(:viridis)
-
-function get_tri_total_rate(tri)
-    ds = results["tri_slip_rates"][tri.name]["dip_slip"]
-    ss = results["tri_slip_rates"][tri.name]["strike_slip"]
-    total_rate = sqrt(ds^2 + ss^2)
-end
-
-if length(tris) > 0
-    tri_rates = [get_tri_total_rate(tri) for tri in tris]
-    tri_rate_min = minimum(tri_rates)
-    tri_rate_max = maximum(tri_rates)
-end
-
-function plot_tri(tri; vmin=tri_rate_min, vmax=tri_rate_max)
-    lons = [tri.p1[1], tri.p2[1], tri.p3[1], tri.p1[1]]
-    lats = [tri.p1[2], tri.p2[2], tri.p3[2], tri.p1[2]]
-    total_rate = get_tri_total_rate(tri)
-    rate_frac = (total_rate - vmin) / (vmax - vmin)
-    color = cm(rate_frac)
-    # color = [0., 0., rate_frac]
-    fill(lons, lats, color=color, alpha=0.25, zorder=0)
-end
-
-for tri in tris
-    plot_tri(tri)
-end
+#cm = get_cmap(:viridis)
+#
+#function get_tri_total_rate(tri)
+#    ds = results["tri_slip_rates"][tri.name]["dip_slip"]
+#    ss = results["tri_slip_rates"][tri.name]["strike_slip"]
+#    total_rate = sqrt(ds^2 + ss^2)
+#end
+#
+#if length(tris) > 0
+#    tri_rates = [get_tri_total_rate(tri) for tri in tris]
+#    tri_rate_min = minimum(tri_rates)
+#    tri_rate_max = maximum(tri_rates)
+#end
+#
+#function plot_tri(tri; vmin=tri_rate_min, vmax=tri_rate_max)
+#    lons = [tri.p1[1], tri.p2[1], tri.p3[1], tri.p1[1]]
+#    lats = [tri.p1[2], tri.p2[2], tri.p3[2], tri.p1[2]]
+#    total_rate = get_tri_total_rate(tri)
+#    rate_frac = (total_rate - vmin) / (vmax - vmin)
+#    color = cm(rate_frac)
+#    # color = [0., 0., rate_frac]
+#    fill(lons, lats, color=color, alpha=0.25, zorder=0)
+#end
+#
+#for tri in tris
+#    plot_tri(tri)
+#end
 
 
 for fault in faults
