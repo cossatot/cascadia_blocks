@@ -8,16 +8,19 @@ using Setfield
 
 using Oiler
 
-#midas_vel_file = "../data/midas_vels.geojson"
-#gsrm_vel_file = "../data/gsrm_na_rel.geojson"
-all_vels_file = "../data/vels_consolidated_ak_trimmed.geojson"
+
+save_results = true
+
+midas_vel_file = "../geod/midas_no_ak.geojson"
+gsrm_vel_file = "../geod/gsrm_na_rel_no_ak.geojson"
+all_vels_file = "../data/vels_consolidated.geojson"
+elliott_vels_file = "../data/elliott_freymueller_2020_vels.geojson"
 blocks_file = "../data/cascadia_blocks.geojson"
 idl_block_file = "../../../geodesy/global_blocks/data/idl_blocks.geojson"
 s_us_block_file = "../../../us_faults/s_us_faults/s_us_blocks.geojson"
 s_us_fault_file = "../../../us_faults/s_us_faults/s_us_faults.geojson"
 cascadia_geol_slip_rates_file = "../data/cascadia_geol_slip_rate_pts.geojson"
 new_us_geol_rates_file = "../../../us_faults/s_us_faults/new_us_faults_geol_slip_rates.geojson"
-
 aleut_tris_file = "../../../geodesy/global_block_comps/data/sub_tri_meshes/alu_tris.geojson"
 
 #trench_faults_file = "../data/cascadia_trench_faults.geojson"
@@ -26,8 +29,9 @@ aleut_tris_file = "../../../geodesy/global_block_comps/data/sub_tri_meshes/alu_t
 tris_file = "../data/graham_cascadia_subduction_tris.geojson"
 faults_file = "../data/cascadia_block_faults.geojson"
 
-#midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
-#gsrm_df = Oiler.IO.gis_vec_file_to_df(gsrm_vel_file)
+midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
+gsrm_df = Oiler.IO.gis_vec_file_to_df(gsrm_vel_file)
+elliott_df = Oiler.IO.gis_vec_file_to_df(elliott_vels_file)
 gnss_df = Oiler.IO.gis_vec_file_to_df(all_vels_file)
 fault_df = Oiler.IO.gis_vec_file_to_df(faults_file)
 s_us_fault_df = Oiler.IO.gis_vec_file_to_df(s_us_fault_file)
@@ -53,10 +57,49 @@ tri_json = JSON.parsefile(tris_file)
 aleut_tri_json = JSON.parsefile(aleut_tris_file)
 
 
+@info "culling blocks"
+#println("n blocks before ", size(block_df, 1))
+#bound_df = Oiler.IO.gis_vec_file_to_df("../data/cascadia_qua_cascadia_boundary.geojson")
+#block_df = Oiler.IO.get_blocks_in_bounds!(block_df, bound_df; epsg=2991)
+println("n blocks after ", size(block_df, 1))
+
 # load GNSS data
 
 #@info "doing GSRM GNSS"
 #@time gsrm_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gsrm_df, block_df;
+##@info "doing GNSS"
+##@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
+#                                                           fix="na",
+#                                                           ve=:e_vel,
+#                                                           vn=:n_vel,
+#                                                           ee=:e_err,
+#                                                           en=:n_err,
+#                                                           name=:station,
+#                                                           epsg=2991)
+#
+#@info "doing MIDAS"
+#@time midas_vels = Oiler.IO.make_vels_from_gnss_and_blocks(midas_df, block_df;
+##@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
+#                                                           fix="na",
+#                                                           ve=:e_vel,
+#                                                           vn=:n_vel,
+#                                                           ee=:e_err,
+#                                                           en=:n_err,
+#                                                           name=:station,
+#                                                           epsg=2991)
+#
+#@info "doing Elliott"
+#@time elliott_vels = Oiler.IO.make_vels_from_gnss_and_blocks(elliott_df, block_df;
+##@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
+#                                                           fix="na",
+#                                                           ve=:e_vel,
+#                                                           vn=:n_vel,
+#                                                           ee=:e_err,
+#                                                           en=:n_err,
+#                                                           name=:station,
+#                                                           epsg=2991)
+#gnss_vels = vcat(midas_vels, gsrm_vels, elliott_vels)
+
 @info "doing GNSS"
 @time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
                                                            fix="na",
@@ -67,18 +110,10 @@ aleut_tri_json = JSON.parsefile(aleut_tris_file)
                                                            name=:station,
                                                            epsg=2991)
 
-#@info "doing MIDAS GNSS"
-#@time midas_vels = Oiler.IO.make_vels_from_gnss_and_blocks(midas_df, block_df;
-#                                                            fix="na",
-#                                                            ve=:na_ve_mm_yr,
-#                                                            vn=:na_vn_mm_yr,
-#                                                            ee=:na_ee_mm_yr,
-#                                                            en=:na_en_mm_yr,
-#                                                            name=:site,
-#                                                            epsg=2991)
-#
-#gnss_vels = vcat(gsrm_vels, midas_vels)
-
+println("n gnss vels: ", length(gnss_vels))
+#gnss_vels = [g for g in gnss_vels if sqrt(g.ee^2 + g.en^2) < 2.5 ]
+gnss_vels = filter(g->sqrt(g.ee^2+g.en^2) < 2.5, gnss_vels)
+println("n gnss vels: ", length(gnss_vels))
 
 # Fake JDF vel points
 jdf_pt_file = "../data/jdf_vel_pts.csv"
@@ -132,7 +167,7 @@ aleut_tris = Oiler.IO.tris_from_geojson(aleut_tri_json)
 
 tris = vcat(tris, aleut_tris)
 
-function set_tri_rates(tri; ds=25., de=1., ss=0., se=0.5)
+function set_tri_rates(tri; ds=25., de=5., ss=0., se=1)
     tri = @set tri.dip_slip_rate = ds
     tri = @set tri.dip_slip_err = de
     tri = @set tri.strike_slip_rate = ss
@@ -141,168 +176,39 @@ function set_tri_rates(tri; ds=25., de=1., ss=0., se=0.5)
 end
 
 tris = map(set_tri_rates, tris)
+#tris = []
 
 # faults
 
-dropmissing!(fault_df, :hw)
-dropmissing!(fault_df, :fw)
+fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
+                                                        faults_file, 
+                                                        s_us_fault_file;
+                                                        block_df=block_df,
+                                                        subset_in_bounds=true,
+                                                        usd=:upper_seis_depth,
+                                                        lsd=:lower_seis_depth)
 
-fault_df = filter(row -> !(row.hw == ""), fault_df)
-fault_df = filter(row -> !(row.fw == ""), fault_df)
-
-
-fault_weight = 1.
-
-function vel_nothing_fix(vel; return_val=0.)
-    if vel == ""
-        return return_val
-    elseif isnothing(vel) | ismissing(vel)
-        return return_val
-    else
-        if typeof(vel) == String
-            return parse(Float64, vel)
-        else
-            return vel
-        end
-    end
-end
-
-function err_nothing_fix(err; return_val=2.)
-    if err == ""
-        return return_val
-    elseif isnothing(err) | ismissing(err) | (err == 0.)
-        return return_val
-    else
-        if typeof(err) == String
-            err = parse(Float64, err)
-            if iszero(err)
-                return return_val
-            else
-                return err
-            end
-        else
-            return err
-        end
-    end
-end
-
-
-function row_to_fault(row)
-    trace = Oiler.IO.get_coords_from_geom(row[:geometry])
-
-    Oiler.Fault(trace=trace,
-        dip_dir=row[:dip_dir],
-        extension_rate=vel_nothing_fix(row[:v_ex]),
-        extension_err=err_nothing_fix(row[:e_ex], return_val=0.5),
-        dextral_rate=vel_nothing_fix(row[:v_rl]),
-        dextral_err=err_nothing_fix(row[:e_rl], return_val=0.5),
-        dip=row[:dip],
-        fid=row[:fid],
-        hw=row[:hw],
-        fw=row[:fw],
-        #name=row[:name],
-        # usd=row[:usd],
-        lsd=vel_nothing_fix(row[:lower_seis_depth]; return_val=15.),
-        )
-end
-
-faults = [row_to_fault(fault_df[i,:]) for i in 1:size(fault_df, 1)]
-# faults = [Oiler.IO.row_to_fault(fault_df[i,:]; usd=:upper_seis_depth, lsd=:lower_seis_depth) for i in 1:size(fault_df, 1)]
-
-# faults = []
-# for i in 1:size(fault_df, 1)
-#    try
-#        push!(faults, Oiler.IO.row_to_fault(fault_df[i,:]; 
-#                                            usd=:upper_seis_depth, 
-#                                            lsd=:lower_seis_depth)
-#             )
-#    catch
-#        println(fault_df[i,:])
-#    end
-# end
-
-
-#faults = [fault for fault in faults if fault.fw != "c006"]
-#faults = [fault for fault in faults if fault.hw != "c_07"]
-# faults = [fault for fault in faults if (fault.name == "cf197") ⊻ (fault.fw != "c006")]
-
-# faults = map(feat_to_Fault, fault_json["features"]);
-# fault_vels_ = map(Oiler.fault_to_vels, faults);
-
-fault_vels = []
-for fault in faults
-    try
-        vel = Oiler.fault_to_vel(fault)
-        push!(fault_vels, vel)
-    catch
-        println(fault.name)
-    end
-end
-
-fault_vels = convert(Array{VelocityVectorSphere}, fault_vels)
-
-# fault_vels_ = map(Oiler.fault_to_vel, faults);
-# fault_vels = reduce(vcat, fault_vels_)
 println("n faults: ", length(faults))
-
-# geol slip rates
-function make_vel_from_slip_rate(slip_rate_row, fault_df)
-    fault_seg = slip_rate_row[:fault_seg]
-    fault_idx = fault_seg # parse(Int, fault_seg)
-    fault_row = @where(fault_df, :fid .== fault_idx)[1,:]
-    fault = row_to_fault(fault_row)
-
-    extension_rate = vel_nothing_fix(slip_rate_row[:extension_rate])
-    extension_err = err_nothing_fix(slip_rate_row[:extension_err])# ; return_val=5.)
-    dextral_rate = vel_nothing_fix(slip_rate_row[:dextral_rate])
-    dextral_err = err_nothing_fix(slip_rate_row[:dextral_err])# ; return_val=5.)
-
-    ve, vn = Oiler.Faults.fault_slip_rate_to_ve_vn(dextral_rate, 
-                                                   extension_rate,
-                                                   fault.strike)
-
-    ee, en, cen = Oiler.Faults.fault_slip_rate_err_to_ee_en(dextral_err, 
-                                                            extension_err,
-                                                            fault.strike)
-
-    pt = Oiler.IO.get_coords_from_geom(slip_rate_row[:geometry])
-    lon = pt[1]
-    lat = pt[2]
-    
-    VelocityVectorSphere(lon=lon, lat=lat, ve=ve, vn=vn, fix=fault.hw,
-                         ee=ee, en=en, cen=cen,
-                         mov=fault.fw, vel_type="fault", name=fault_seg)
-
-end
+println("n fault vels: ", length(fault_vels))
 
 
-geol_slip_rate_vels = []
-
-for i in 1:size(geol_slip_rate_df, 1)
-    slip_rate_row = geol_slip_rate_df[i,:]
-    if (slip_rate_row[:include] == true) | (slip_rate_row[:include] == "1")
-        try
-            push!(geol_slip_rate_vels, make_vel_from_slip_rate(slip_rate_row, 
-                                                           fault_df))
-        catch
-            println(slip_rate_row[:fault_seg])
-        end
-    end
-end
-
-geol_slip_rate_vels = convert(Array{VelocityVectorSphere}, geol_slip_rate_vels)
-
+@info "doing geol slip rates"
+geol_slip_rate_df, geol_slip_rate_vels = Oiler.IO.make_geol_slip_rate_vels!(
+                                                        geol_slip_rate_df, 
+                                                        fault_df;
+                                                        usd="upper_seis_depth",
+                                                        lsd="lower_seis_depth")
 println("n fault slip rate vels: ", length(geol_slip_rate_vels))
 
 
-vels = vcat(fault_vels, gnss_vels, jdf_vels, geol_slip_rate_vels, exp_vels)
-
-vels = [vel for vel in vels if (vel.fix != "")]
-vels = [vel for vel in vels if (vel.mov != "")]
-
+vels = vcat(fault_vels, 
+            gnss_vels, 
+            jdf_vels, 
+            geol_slip_rate_vels, 
+            exp_vels
+           )
 
 vel_groups = Oiler.group_vels_by_fix_mov(vels)
-
 
 
 """
@@ -313,25 +219,27 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      tris=tris,
      #tris=[],
      faults=faults,
-     tri_distance_weight=50.,
-     tri_priors=true,
+     tri_distance_weight=10.,
+     #tri_priors=true,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
-     check_closures=false,
+     check_closures=true,
      pred_se=true,
-     constraint_method="kkt_sym",
+     constraint_method="kkt",
      factorization="lu",
     );
 
 
-Oiler.IO.write_fault_results_to_gj(results, 
+if save_results
+    Oiler.IO.write_fault_results_to_gj(results, 
     "../results/w_us_cascadia_fault_results.geojson";
     name="Western North America faults")
 
-Oiler.IO.write_tri_results_to_gj(tris, results,
+    Oiler.IO.write_tri_results_to_gj(tris, results,
     "../results/cascadia_aleut_tri_results.geojson";
     name="Cascadia/Aleut tri rates")
+end
 
 pole_arr = collect(values(results["poles"]))
 pole_arr = [pole for pole in pole_arr if typeof(pole) == Oiler.PoleCart]
@@ -390,8 +298,8 @@ for (i, rate) in enumerate(geol_slip_rate_vels)
     #fault_idx = parse(Int, rate.name)
     fault_idx = rate.name
     fault_row = @where(fault_df, :fid .== fault_idx)[1,:]
-    #fault = Oiler.IO.row_to_fault(fault_row)
-    fault = row_to_fault(fault_row)
+    fault = Oiler.IO.row_to_fault(fault_row; lsd="lower_seis_depth", 
+                                             usd="upper_seis_depth")
     
     if haskey(results["poles"], (rate.fix, rate.mov))
         pred_rate = Oiler.Faults.get_fault_slip_rate_from_pole(fault, 
@@ -531,7 +439,9 @@ show();
 na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
                                                 string(block_df[i, :fid]))
                 for i in 1:size(block_df, 1)]
-CSV.write("../results/na_rel_poles.csv", 
+if save_results
+    CSV.write("../results/na_rel_poles.csv", 
             Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
+end
 
 println("done")
