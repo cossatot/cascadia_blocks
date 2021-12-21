@@ -16,12 +16,12 @@ gsrm_vel_file = "../geod/gsrm_na_rel_no_ak.geojson"
 all_vels_file = "../data/vels_consolidated.geojson"
 elliott_vels_file = "../data/elliott_freymueller_2020_vels.geojson"
 blocks_file = "../data/cascadia_blocks.geojson"
-idl_block_file = "../../../geodesy/global_blocks/data/idl_blocks.geojson"
+idl_block_file = "../../../geodesy/global_blocks/old/data/idl_blocks.geojson"
 s_us_block_file = "../../../us_faults/s_us_faults/s_us_blocks.geojson"
 s_us_fault_file = "../../../us_faults/s_us_faults/s_us_faults.geojson"
 cascadia_geol_slip_rates_file = "../data/cascadia_geol_slip_rate_pts.geojson"
 new_us_geol_rates_file = "../../../us_faults/s_us_faults/new_us_faults_geol_slip_rates.geojson"
-aleut_tris_file = "../../../geodesy/global_block_comps/data/sub_tri_meshes/alu_tris.geojson"
+aleut_tris_file = "../../../geodesy/global_block_comps/subduction/sub_tri_meshes/alu_tris.geojson"
 
 #trench_faults_file = "../data/cascadia_trench_faults.geojson"
 
@@ -167,7 +167,7 @@ aleut_tris = Oiler.IO.tris_from_geojson(aleut_tri_json)
 
 tris = vcat(tris, aleut_tris)
 
-function set_tri_rates(tri; ds=25., de=5., ss=0., se=1)
+function set_tri_rates(tri; ds=25., de=5., ss=0., se=5.)
     tri = @set tri.dip_slip_rate = ds
     tri = @set tri.dip_slip_err = de
     tri = @set tri.strike_slip_rate = ss
@@ -220,7 +220,7 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      #tris=[],
      faults=faults,
      tri_distance_weight=10.,
-     #tri_priors=true,
+     tri_priors=true,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
