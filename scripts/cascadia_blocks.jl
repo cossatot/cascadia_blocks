@@ -20,6 +20,7 @@ idl_block_file = "../../../geodesy/global_blocks/old/data/idl_blocks.geojson"
 s_us_block_file = "../../../us_faults/s_us_faults/s_us_blocks.geojson"
 s_us_fault_file = "../../../us_faults/s_us_faults/s_us_faults.geojson"
 cascadia_geol_slip_rates_file = "../data/cascadia_geol_slip_rate_pts.geojson"
+cali_geol_slip_rates_file = "../../../us_faults/s_us_faults/ca_geol_slip_rates.geojson"
 new_us_geol_rates_file = "../../../us_faults/s_us_faults/new_us_faults_geol_slip_rates.geojson"
 #aleut_tris_file = "../../../geodesy/global_block_comps/subduction/sub_tri_meshes/alu_tris.geojson"
 aleut_tris_file = "../../../geodesy/global_block_comps/subduction/sub_tri_meshes/alu_tris_slab2.geojson"
@@ -50,8 +51,9 @@ block_df = vcat(block_df, idl_block_df, s_us_block_df)
 
 casc_geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(cascadia_geol_slip_rates_file)
 geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(new_us_geol_rates_file)
+cali_geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(cali_geol_slip_rates_file)
 
-geol_slip_rate_df = vcat(geol_slip_rate_df, casc_geol_slip_rate_df)
+geol_slip_rate_df = vcat(geol_slip_rate_df, casc_geol_slip_rate_df, cali_geol_slip_rate_df)
 
 tri_json = JSON.parsefile(tris_file)
 
