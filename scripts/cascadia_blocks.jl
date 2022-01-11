@@ -127,10 +127,11 @@ exp_vels = [Oiler.VelocityVectorSphere(vel; vel_type="fault") for vel in exp_vel
 cascadia_tris = Oiler.IO.tris_from_geojson(tri_json)
 
 
-#cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
-#                                                 locking_fraction=0.5,
-#                                                 err_coeff=0.)
-#println(cascadia_tris[1])
+cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
+                                                 locking_fraction=0.5,
+                                                 depth_adjust=true,
+                                                 err_coeff=1.)
+println(cascadia_tris[1])
 
 aleut_tris = Oiler.IO.tris_from_geojson(aleut_tri_json)
 
@@ -149,10 +150,11 @@ pac_na_pole = Oiler.PoleCart(
   mov = "c024",
 )
 
-#aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
-#                                              locking_fraction=0.5,
-#                                              err_coeff=0.)
-#println(aleut_tris[1])
+aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
+                                              locking_fraction=0.25,
+                                              depth_adjust=true,
+                                              err_coeff=1e6)
+println(aleut_tris[1])
 
 
 tris = vcat(cascadia_tris, aleut_tris)
@@ -177,6 +179,9 @@ fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
                                                         subset_in_bounds=true,
                                                         usd=:upper_seis_depth,
                                                         lsd=:lower_seis_depth)
+# filter ridge vels which immobilize JdF plate
+jdf_ridge_vels = filter( x -> x.mov == "c006", fault_vels)
+fault_vels = filter( x -> x.mov != "c006", fault_vels)
 
 println("n faults: ", length(faults))
 println("n fault vels: ", length(fault_vels))
@@ -207,11 +212,11 @@ SOLVE
 # poles, tri_rates = 
 results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      tris=tris,
-     regularize_tris=true,
+     regularize_tris=false,
      #tris=[],
      faults=faults,
-     tri_distance_weight=10.,
-     tri_priors=false,
+     tri_distance_weight=1000.,
+     tri_priors=true,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
