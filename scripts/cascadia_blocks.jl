@@ -9,7 +9,7 @@ using Setfield
 using Oiler
 
 
-save_results = true
+save_results = false
 
 midas_vel_file = "../geod/midas_no_ak.geojson"
 gsrm_vel_file = "../geod/gsrm_na_rel_no_ak.geojson"
@@ -114,7 +114,7 @@ exp_pac_pole = Oiler.PoleSphere(
 
 exp_pac_pole2 = Oiler.PoleSphere(
     lat=54.80, lon=-116.62, rotrate=3.1, 
-    elat=0.25, elon=0.25, erotrate=0.31,
+    elat=0.25 * 0.5, elon=0.25 * 0.5, erotrate=0.31 * 0.1,
     fix="c024", mov="c112")
 
 exp_pt_file = "../data/explorer_vel_pts.csv"
@@ -133,8 +133,6 @@ cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
                                                  locking_fraction=0.5,
                                                  depth_adjust=true,
                                                  err_coeff=1.)
-println(cascadia_tris[1])
-
 aleut_tris = Oiler.IO.tris_from_geojson(aleut_tri_json)
 
 # Pac-NA pole for Aleut priors
@@ -155,9 +153,8 @@ pac_na_pole = Oiler.PoleCart(
 aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
                                               locking_fraction=0.25,
                                               depth_adjust=true,
+                                              depth_max=100.,
                                               err_coeff=1e6)
-println(aleut_tris[1])
-
 
 tris = vcat(cascadia_tris, aleut_tris)
 
@@ -214,16 +211,16 @@ SOLVE
 # poles, tri_rates = 
 results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      tris=tris,
-     regularize_tris=false,
+     regularize_tris=true,
      #tris=[],
      faults=faults,
-     tri_distance_weight=1000.,
-     tri_priors=true,
+     tri_distance_weight=20.,
+     tri_priors=false,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
      check_closures=true,
-     pred_se=true,
+     pred_se=false,
      check_nans=true,
      constraint_method="kkt_sym",
      factorization="lu",
