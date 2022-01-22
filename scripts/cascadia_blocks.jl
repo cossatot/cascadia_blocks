@@ -9,7 +9,7 @@ using Setfield
 using Oiler
 
 
-save_results = false
+save_results = true
 
 midas_vel_file = "../geod/midas_no_ak.geojson"
 gsrm_vel_file = "../geod/gsrm_na_rel_no_ak.geojson"
