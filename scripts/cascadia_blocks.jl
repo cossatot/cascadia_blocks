@@ -27,8 +27,8 @@ aleut_tris_file = "../../../geodesy/global_block_comps/subduction/sub_tri_meshes
 
 #trench_faults_file = "../data/cascadia_trench_faults.geojson"
 
-# tris_file = "../data/cascadia_subduction_tris.geojson"
-tris_file = "../data/graham_cascadia_subduction_tris.geojson"
+tris_file = "../data/jdf_explorer_interface.geojson"
+#tris_file = "../data/graham_cascadia_subduction_tris.geojson"
 faults_file = "../data/cascadia_block_faults.geojson"
 
 midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
@@ -69,14 +69,14 @@ println("n blocks after ", size(block_df, 1))
 # load GNSS data
 
 @info "doing GNSS"
-@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
-                                                           fix="na",
-                                                           ve=:e_vel,
-                                                           vn=:n_vel,
-                                                           ee=:e_err,
-                                                           en=:n_err,
-                                                           name=:station,
-                                                           epsg=2991)
+#@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
+#                                                           fix="na",
+#                                                           ve=:e_vel,
+#                                                           vn=:n_vel,
+#                                                           ee=:e_err,
+#                                                           en=:n_err,
+#                                                           name=:station,
+#                                                           epsg=2991)
 
 println("n gnss vels: ", length(gnss_vels))
 
@@ -128,11 +128,11 @@ exp_vels = [Oiler.VelocityVectorSphere(vel; vel_type="fault") for vel in exp_vel
 
 cascadia_tris = Oiler.IO.tris_from_geojson(tri_json)
 
-
 cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
-                                                 locking_fraction=0.5,
+                                                 locking_fraction=0.35,
                                                  depth_adjust=true,
                                                  err_coeff=1.)
+
 aleut_tris = Oiler.IO.tris_from_geojson(aleut_tri_json)
 
 # Pac-NA pole for Aleut priors
@@ -158,16 +158,6 @@ aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
 
 tris = vcat(cascadia_tris, aleut_tris)
 
-#function set_tri_rates(tri; ds=20., de=20., ss=0., se=10.)
-#    tri = @set tri.dip_slip_rate = ds
-#    tri = @set tri.dip_slip_err = de
-#    tri = @set tri.strike_slip_rate = ss
-#    tri = @set tri.strike_slip_err = se
-#    tri
-#end
-#
-#tris = map(set_tri_rates, tris)
-#tris = []
 
 # faults
 
@@ -175,6 +165,7 @@ fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
                                                         faults_file, 
                                                         s_us_fault_file;
                                                         block_df=block_df,
+                                                        fid_drop="cf197",
                                                         subset_in_bounds=true,
                                                         usd=:upper_seis_depth,
                                                         lsd=:lower_seis_depth)
@@ -215,7 +206,7 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      #tris=[],
      faults=faults,
      tri_distance_weight=20.,
-     tri_priors=false,
+     tri_priors=true,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
