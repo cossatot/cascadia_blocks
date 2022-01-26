@@ -8,6 +8,7 @@ using Setfield
 
 using Oiler
 
+geol_slip_rate_weight = 4.
 
 save_results = true
 
@@ -69,14 +70,14 @@ println("n blocks after ", size(block_df, 1))
 # load GNSS data
 
 @info "doing GNSS"
-#@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
-#                                                           fix="na",
-#                                                           ve=:e_vel,
-#                                                           vn=:n_vel,
-#                                                           ee=:e_err,
-#                                                           en=:n_err,
-#                                                           name=:station,
-#                                                           epsg=2991)
+@time gnss_vels = Oiler.IO.make_vels_from_gnss_and_blocks(gnss_df, block_df;
+                                                           fix="na",
+                                                           ve=:e_vel,
+                                                           vn=:n_vel,
+                                                           ee=:e_err,
+                                                           en=:n_err,
+                                                           name=:station,
+                                                           epsg=2991)
 
 println("n gnss vels: ", length(gnss_vels))
 
@@ -151,7 +152,7 @@ pac_na_pole = Oiler.PoleCart(
 )
 
 aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
-                                              locking_fraction=0.25,
+                                              locking_fraction=0.5,
                                               depth_adjust=true,
                                               depth_max=100.,
                                               err_coeff=1e6)
@@ -181,6 +182,7 @@ println("n fault vels: ", length(fault_vels))
 geol_slip_rate_df, geol_slip_rate_vels = Oiler.IO.make_geol_slip_rate_vels!(
                                                         geol_slip_rate_df, 
                                                         fault_df;
+                                                        weight = geol_slip_rate_weight,
                                                         usd="upper_seis_depth",
                                                         lsd="lower_seis_depth")
 println("n fault slip rate vels: ", length(geol_slip_rate_vels))
@@ -211,7 +213,7 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      sparse_lhs=true,
      predict_vels=true,
      check_closures=true,
-     pred_se=false,
+     pred_se=true,
      check_nans=true,
      constraint_method="kkt_sym",
      factorization="lu",
