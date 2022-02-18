@@ -62,9 +62,9 @@ aleut_tri_json = JSON.parsefile(aleut_tris_file)
 
 
 @info "culling blocks"
-#println("n blocks before ", size(block_df, 1))
-#bound_df = Oiler.IO.gis_vec_file_to_df("../data/cascadia_qua_cascadia_boundary.geojson")
-#block_df = Oiler.IO.get_blocks_in_bounds!(block_df, bound_df; epsg=2991)
+println("n blocks before ", size(block_df, 1))
+bound_df = Oiler.IO.gis_vec_file_to_df("../data/cascadia_qua_cascadia_boundary.geojson")
+block_df = Oiler.IO.get_blocks_in_bounds!(block_df, bound_df; epsg=2991)
 println("n blocks after ", size(block_df, 1))
 
 # load GNSS data
