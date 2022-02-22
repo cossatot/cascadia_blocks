@@ -17,7 +17,7 @@ gsrm_vel_file = "../geod/gsrm_na_rel_no_ak.geojson"
 all_vels_file = "../data/vels_consolidated.geojson"
 elliott_vels_file = "../data/elliott_freymueller_2020_vels.geojson"
 blocks_file = "../data/cascadia_blocks.geojson"
-idl_block_file = "../../../geodesy/global_blocks/old/data/idl_blocks.geojson"
+idl_block_file = "../../../geodesy/global_block_comps/global_scale_plates/global_scale_plates.geojson"
 s_us_block_file = "../../../us_faults/s_us_faults/s_us_blocks.geojson"
 s_us_fault_file = "../../../us_faults/s_us_faults/s_us_faults.geojson"
 cascadia_geol_slip_rates_file = "../data/cascadia_geol_slip_rate_pts.geojson"
@@ -32,10 +32,10 @@ tris_file = "../data/jdf_explorer_interface.geojson"
 #tris_file = "../data/graham_cascadia_subduction_tris.geojson"
 faults_file = "../data/cascadia_block_faults.geojson"
 
-midas_df = Oiler.IO.gis_vec_file_to_df(midas_vel_file)
-gsrm_df = Oiler.IO.gis_vec_file_to_df(gsrm_vel_file)
-elliott_df = Oiler.IO.gis_vec_file_to_df(elliott_vels_file)
+@info "loading vel df"
 gnss_df = Oiler.IO.gis_vec_file_to_df(all_vels_file)
+
+@info "loading faults"
 fault_df = Oiler.IO.gis_vec_file_to_df(faults_file)
 s_us_fault_df = Oiler.IO.gis_vec_file_to_df(s_us_fault_file)
 
@@ -44,18 +44,21 @@ s_us_fault_df = Oiler.IO.gis_vec_file_to_df(s_us_fault_file)
 #fault_df = vcat(fault_df, s_us_fault_df, trench_fault_df)
 fault_df = vcat(fault_df, s_us_fault_df)
 
+@info "loading blocks"
 block_df = Oiler.IO.gis_vec_file_to_df(blocks_file)
-idl_block_df = Oiler.IO.gis_vec_file_to_df(idl_block_file)
+idl_block_df = Oiler.IO.gis_vec_file_to_df(idl_block_file, fid_skip=["ant"])
 s_us_block_df = Oiler.IO.gis_vec_file_to_df(s_us_block_file)
 block_df = vcat(block_df, idl_block_df, s_us_block_df)
 #block_df = vcat(block_df, idl_block_df)
 
+@info "loading slip rates"
 casc_geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(cascadia_geol_slip_rates_file)
 geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(new_us_geol_rates_file)
 cali_geol_slip_rate_df = Oiler.IO.gis_vec_file_to_df(cali_geol_slip_rates_file)
 
 geol_slip_rate_df = vcat(geol_slip_rate_df, casc_geol_slip_rate_df, cali_geol_slip_rate_df)
 
+@info "loading tris"
 tri_json = JSON.parsefile(tris_file)
 
 aleut_tri_json = JSON.parsefile(aleut_tris_file)
@@ -64,7 +67,7 @@ aleut_tri_json = JSON.parsefile(aleut_tris_file)
 @info "culling blocks"
 println("n blocks before ", size(block_df, 1))
 bound_df = Oiler.IO.gis_vec_file_to_df("../data/cascadia_qua_cascadia_boundary.geojson")
-block_df = Oiler.IO.get_blocks_in_bounds!(block_df, bound_df; epsg=2991)
+block_df = Oiler.IO.get_blocks_in_bounds!(block_df, bound_df; epsg=102016)
 println("n blocks after ", size(block_df, 1))
 
 # load GNSS data
@@ -77,10 +80,12 @@ println("n blocks after ", size(block_df, 1))
                                                            ee=:e_err,
                                                            en=:n_err,
                                                            name=:station,
-                                                           epsg=2991)
+                                                           epsg=102016)
 
 println("n gnss vels: ", length(gnss_vels))
 
+
+@info "doing ocean plate vels"
 # Fake JDF vel points
 jdf_pt_file = "../data/jdf_vel_pts.csv"
 jdf_pts = CSV.read(jdf_pt_file, DataFrame)
@@ -127,6 +132,7 @@ exp_vels = Oiler.BlockRotations.predict_block_vels(exp_pts[:,:lon],
 
 exp_vels = [Oiler.VelocityVectorSphere(vel; vel_type="fault") for vel in exp_vels]
 
+@info "doing tris"
 cascadia_tris = Oiler.IO.tris_from_geojson(tri_json)
 
 cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
@@ -157,10 +163,13 @@ aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
                                               depth_max=100.,
                                               err_coeff=1e6)
 
-tris = vcat(cascadia_tris, aleut_tris)
+#tris = vcat(cascadia_tris, aleut_tris)
+tris = cascadia_tris
 
 
 # faults
+
+@info "doing faults"
 
 fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
                                                         faults_file, 
@@ -235,13 +244,13 @@ Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
                                fault_df, results, usd=:upper_seis_depth,
                                lsd=:lower_seis_depth)
 
-#na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
-#                                                string(block_df[i, :fid]))
-#                for i in 1:size(block_df, 1)]
-#if save_results
-#    CSV.write("../results/na_rel_poles.csv", 
-#            Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
-#end
+na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
+                                                string(block_df[i, :fid]))
+                for i in 1:size(block_df, 1)]
+if save_results
+    #CSV.write("../results/na_rel_poles.csv", 
+    #        Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
+end
 
 Oiler.WebViewer.write_web_viewer(results=results, block_df=block_df,
                                  directory="../web_viewer", ref_pole="na")
