@@ -9,7 +9,7 @@ using Setfield
 using Oiler
 
 geol_slip_rate_weight = 2.
-save_results = false
+save_results = true
 
 
 # cascadia blocks
@@ -67,6 +67,7 @@ println("n blocks before ", size(block_df, 1))
 bound_df = Oiler.IO.gis_vec_file_to_df("../data/nw_nam_boundary.geojson")
 #bound_df = Oiler.IO.gis_vec_file_to_df("../data/cascadia_qua_cascadia_boundary.geojson")
 #bound_df = Oiler.IO.gis_vec_file_to_df("../data/just_casc.geojson")
+#bound_df = Oiler.IO.gis_vec_file_to_df("../data/ak_bounds.geojson")
 block_df = Oiler.IO.get_blocks_in_bounds!(block_df, 
                                           bound_df)
 println("n blocks after ", size(block_df, 1))
@@ -109,9 +110,9 @@ jdf_vels = Oiler.BlockRotations.predict_block_vels(jdf_pts[:,:lon],
 jdf_vels = [Oiler.VelocityVectorSphere(vel; vel_type="plate") for vel in jdf_vels]
 #jdf_vels = jdf_vels
 
-
+# eplorer poles from Braunmiller and Nabelek, 2002
 exp_pac_pole = Oiler.PoleSphere(
-    lat=53.99, lon=120.04, rotrate=3.3, 
+    lat=53.99, lon=-120.04, rotrate=3.3, 
     elat=0.25, elon=0.25, erotrate=0.33,
     fix="c024", mov="c112")
 
@@ -120,14 +121,21 @@ exp_pac_pole2 = Oiler.PoleSphere(
     elat=0.25 * 0.5, elon=0.25 * 0.5, erotrate=0.31 * 0.1,
     fix="c024", mov="c112")
 
+
+exp_nam_pole = Oiler.PoleSphere(
+    lat=52.67, lon=-131.90, rotrate=2.65,
+    elat=0.25, elon=0.35, erotrate=0.265,
+    fix="na", mov="c112")
+
+
 exp_pt_file = "../data/explorer_vel_pts.csv"
 exp_pts = CSV.read(exp_pt_file, DataFrame)
 
 exp_vels = Oiler.BlockRotations.predict_block_vels(exp_pts[:,:lon],
                                                    exp_pts[:,:lat],
-                                                   exp_pac_pole2)
+                                                   exp_nam_pole)
 
-exp_vels = [Oiler.VelocityVectorSphere(vel; vel_type="fault") for vel in exp_vels]
+exp_vels = [Oiler.VelocityVectorSphere(vel; vel_type="plate") for vel in exp_vels]
 
 
 
@@ -137,10 +145,19 @@ cascadia_tri_json = JSON.parsefile(cascadia_tris_file)
 aleut_tri_json = JSON.parsefile(aleut_tris_file)
 
 cascadia_tris = Oiler.IO.tris_from_geojson(cascadia_tri_json)
-cascadia_tris = Oiler.Utils.tri_priors_from_pole(cascadia_tris, jdf_na_pole,
+jdf_tris = filter(t -> t.fw == "jdf", cascadia_tris)
+jdf_tris = Oiler.Utils.tri_priors_from_pole(jdf_tris, jdf_na_pole,
                                                  locking_fraction=0.5,
                                                  depth_adjust=true,
                                                  err_coeff=4.0)
+
+exp_tris = filter(t -> t.fw == "explorer", cascadia_tris)
+exp_tris = Oiler.Utils.tri_priors_from_pole(exp_tris, exp_nam_pole,
+                                                 locking_fraction=0.5,
+                                                 depth_adjust=true,
+                                                 err_coeff=8.0)
+
+cascadia_tris = vcat(jdf_tris, exp_tris)
 
 function set_tri_rates(tri)
    #tri = @set tri.dip_slip_rate = 20.
@@ -170,12 +187,13 @@ pac_na_pole = Oiler.PoleCart(
 )
 
 aleut_tris = Oiler.Utils.tri_priors_from_pole(aleut_tris, pac_na_pole,
-                                              locking_fraction=0.5,
+                                              locking_fraction=0.7,
                                               depth_adjust=true,
-                                              depth_max=100.,
-                                              err_coeff=4.0)
+                                              depth_max=50.,
+                                              err_coeff=0.5)
 
-#tris = cascadia_tris
+tris = cascadia_tris
+tris = aleut_tris
 tris = vcat(cascadia_tris, aleut_tris)
 
 
@@ -188,8 +206,10 @@ fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
                                                         #fid_drop=["cf197"],
                                                         subset_in_bounds=true,
                                                         check_blocks=true,
+                                                        adjust_err_by_dip=true,
                                                         usd=:upper_seis_depth,
-                                                        lsd=:lower_seis_depth)
+                                                        lsd=:lower_seis_depth,
+                                                       )
 # filter ridge vels which immobilize JdF plate
 #jdf_ridge_vels = filter( x -> x.mov == "c006", fault_vels)
 fault_vels = filter( x -> x.mov != "c006", fault_vels)
@@ -200,13 +220,15 @@ println("n fault vels: ", length(fault_vels))
 
 @info "doing non-fault block boundaries"
 @time non_fault_bounds = Oiler.IO.get_non_fault_block_bounds(block_df, faults)
-bound_vels = vcat(map(b->Oiler.Boundaries.boundary_to_vels(b, ee=0.1, en=0.1), 
+bound_vels = vcat(map(b->Oiler.Boundaries.boundary_to_vels(b, ee=0.5, en=0.5), 
                       non_fault_bounds)...)
 
 bound_vels = filter(x->x.fix != "c006", bound_vels)
 bound_vels = filter(x->x.mov != "c006", bound_vels)
 bound_vels = filter(x->x.fix != "c112", bound_vels)
 bound_vels = filter(x->x.mov != "c112", bound_vels)
+bound_vels = filter(x->x.fix != "c024", bound_vels)
+bound_vels = filter(x->x.mov != "c024", bound_vels)
 
 println("n non-fault-bound vels: ", length(bound_vels))
 
@@ -250,42 +272,57 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      tris=tris,
      regularize_tris=true,
      faults=faults,
-     tri_distance_weight=40.,
+     tri_distance_weight=15.,
      tri_priors=true,
      weighted=true,
      sparse_lhs=true,
      predict_vels=true,
      check_closures=false,
-     pred_se=true,
+     pred_se=false,
      check_nans=true,
      constraint_method="kkt_sym",
      factorization="lu",
     );
 
+Oiler.ResultsAnalysis.get_block_centroid_vels(results, block_df; fix="na")
+Oiler.ResultsAnalysis.compare_data_results(results=results,
+                                           vel_groups=vel_groups,
+                                           geol_slip_rate_df=geol_slip_rate_df,
+                                           geol_slip_rate_vels=geol_slip_rate_vels,
+                                           fault_df=fault_df,
+                                           usd=:upper_seis_depth,
+                                           lsd=:lower_seis_depth,
+                                          )
+Oiler.ResultsAnalysis.calculate_resid_block_strain_rates(results)
+
+println(results["stats_info"])
 
 if save_results
     Oiler.IO.write_fault_results_to_gj(results, 
-    "../results/w_us_cascadia_fault_results.geojson";
+    "../results/cascadia_fault_results.geojson";
     name="Western North America faults")
 
     Oiler.IO.write_tri_results_to_gj(tris, results,
     "../results/cascadia_aleut_tri_results.geojson";
     name="Cascadia/Aleut tri rates")
+
+    Oiler.IO.write_gnss_vel_results_to_csv(results, vel_groups,
+                        name="../results/cascadia_gnss_results.csv")
 end
 
-Oiler.Plots.plot_results_map(results, vel_groups, faults, tris)
-Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
-                               fault_df, results, usd=:upper_seis_depth,
-                               lsd=:lower_seis_depth)
-Oiler.Plots.plot_tri_prior_post(tris, results)
+#Oiler.Plots.plot_results_map(results, vel_groups, faults, tris)
+#Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
+#                               fault_df, results, usd=:upper_seis_depth,
+#                               lsd=:lower_seis_depth)
+#Oiler.Plots.plot_tri_prior_post(tris, results)
 
 #na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
 #                                                string(block_df[i, :fid]))
 #                for i in 1:size(block_df, 1)]
-#if save_results
-#    CSV.write("../results/na_rel_poles.csv", 
-#            Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
-#end
+if save_results
+    #CSV.write("../results/na_rel_poles.csv", 
+    #        Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
+end
 
 Oiler.WebViewer.write_web_viewer(results=results, block_df=block_df,
                                  directory="../web_viewer", ref_pole="na")
