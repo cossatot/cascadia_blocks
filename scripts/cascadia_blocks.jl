@@ -9,7 +9,7 @@ using Setfield
 using Oiler
 
 geol_slip_rate_weight = 2.
-save_results = true
+save_results = false
 
 
 # cascadia blocks
@@ -41,7 +41,7 @@ elliott_vels_file = "../data/elliott_freymueller_2020_vels.geojson"
 
 
 # subduction
-aleut_tris_file = "../../subduction/sub_tri_meshes/alu_tris_slab2.geojson"
+aleut_tris_file = "../../subduction/sub_tri_meshes/alu_tris_slab2_updated.geojson"
 cascadia_tris_file = "../data/jdf_explorer_interface.geojson"
 #cascadia_tris_file = "/home/itchy/Desktop/cascadia_tris_graham_priors.geojson"
 #tris_file = "../data/graham_cascadia_subduction_tris.geojson"
@@ -285,18 +285,18 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      factorization="lu",
     );
 
-Oiler.ResultsAnalysis.get_block_centroid_vels(results, block_df; fix="na")
-Oiler.ResultsAnalysis.compare_data_results(results=results,
-                                           vel_groups=vel_groups,
-                                           geol_slip_rate_df=geol_slip_rate_df,
-                                           geol_slip_rate_vels=geol_slip_rate_vels,
-                                           fault_df=fault_df,
-                                           usd=:upper_seis_depth,
-                                           lsd=:lower_seis_depth,
-                                          )
-Oiler.ResultsAnalysis.calculate_resid_block_strain_rates(results)
-
-println(results["stats_info"])
+#Oiler.ResultsAnalysis.get_block_centroid_vels(results, block_df; fix="na")
+#Oiler.ResultsAnalysis.compare_data_results(results=results,
+#                                           vel_groups=vel_groups,
+#                                           geol_slip_rate_df=geol_slip_rate_df,
+#                                           geol_slip_rate_vels=geol_slip_rate_vels,
+#                                           fault_df=fault_df,
+#                                           usd=:upper_seis_depth,
+#                                           lsd=:lower_seis_depth,
+#                                          )
+#Oiler.ResultsAnalysis.calculate_resid_block_strain_rates(results)
+#
+#println(results["stats_info"])
 
 if save_results
     Oiler.IO.write_fault_results_to_gj(results, 
