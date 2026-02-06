@@ -9,8 +9,12 @@ using Setfield
 using Oiler
 
 geol_slip_rate_weight = 2.
-save_results = true
+save_results = false
+stoch_slip_rates = true
 
+@info "damping sig"
+e_default = 2.0
+@info e_default
 
 # cascadia blocks
 cascadia_blocks_file = "../data/cascadia_blocks.geojson"
@@ -205,7 +209,7 @@ fault_df, faults, fault_vels = Oiler.IO.process_faults_from_gis_files(
                                                         cascadia_faults_file, 
                                                         s_us_fault_file;
                                                         block_df=block_df,
-                                                        e_default=5.0,
+                                                        e_default=e_default,
                                                         #fid_drop=["cf197"],
                                                         subset_in_bounds=true,
                                                         check_blocks=true,
@@ -225,7 +229,7 @@ println("n fault vels: ", length(fault_vels))
 
 @info "doing non-fault block boundaries"
 @time non_fault_bounds = Oiler.IO.get_non_fault_block_bounds(block_df, faults)
-bound_vels = vcat(map(b->Oiler.Boundaries.boundary_to_vels(b, ee=5.0, en=5.0), 
+bound_vels = vcat(map(b->Oiler.Boundaries.boundary_to_vels(b, ee=e_default, en=e_default), 
                       non_fault_bounds)...)
 
 bound_vels = filter(x->x.fix != "c006", bound_vels)
@@ -281,38 +285,46 @@ results = Oiler.solve_block_invs_from_vel_groups(vel_groups,
      tri_priors=false,
      predict_vels=true,
      pred_se=true,
+     stoch_slip_rates=stoch_slip_rates,
     );
 
 #Oiler.ResultsAnalysis.get_block_centroid_vels(results, block_df; fix="na")
-#Oiler.ResultsAnalysis.compare_data_results(results=results,
-#                                           vel_groups=vel_groups,
-#                                           geol_slip_rate_df=geol_slip_rate_df,
-#                                           geol_slip_rate_vels=geol_slip_rate_vels,
-#                                           fault_df=fault_df,
-#                                           usd=:upper_seis_depth,
-#                                           lsd=:lower_seis_depth,
-#                                          )
+Oiler.ResultsAnalysis.compare_data_results(results=results,
+                                           vel_groups=vel_groups,
+                                           geol_slip_rate_df=geol_slip_rate_df,
+                                           geol_slip_rate_vels=geol_slip_rate_vels,
+                                           fault_df=fault_df,
+                                           usd=:upper_seis_depth,
+                                           lsd=:lower_seis_depth,
+                                          )
 #Oiler.ResultsAnalysis.calculate_resid_block_strain_rates(results)
 #
-#println(results["stats_info"])
+println(results["stats_info"])
 
 if save_results
     Oiler.IO.write_fault_results_to_gj(results, 
-    "../results/nw_nam_fault_results_5_err.geojson";
+    "../results/nw_nam_fault_results_2_err.geojson";
+    calc_rake=true,
     name="Western North America faults")
 
-    #Oiler.IO.write_tri_results_to_gj(tris, results,
-    #"../results/cascadia_aleut_tri_results.geojson";
-    #name="Cascadia/Aleut tri rates")
+    Oiler.IO.write_tri_results_to_gj(tris, results,
+    "../results/cascadia_aleut_tri_results.geojson";
+    name="Cascadia/Aleut tri rates")
 
-    #Oiler.IO.write_gnss_vel_results_to_csv(results, vel_groups,
-    #                    name="../results/cascadia_gnss_results.csv")
+    Oiler.IO.write_gnss_vel_results_to_csv(results, vel_groups,
+                        name="../results/cascadia_gnss_results.csv")
+    if stoch_slip_rates
+        Oiler.IO.write_stoch_slip_rates_to_gj(
+            results["stoch_slip_rates"], 
+            "../results/nw_nam_stoch_slip_rates_2_err.json"
+           )
+    end
 end
 
 Oiler.Plots.plot_results_map(results, vel_groups, faults, tris)
-Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
-                               fault_df, results, usd=:upper_seis_depth,
-                               lsd=:lower_seis_depth)
+#Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
+#                               fault_df, results, usd=:upper_seis_depth,
+#                               lsd=:lower_seis_depth)
 #Oiler.Plots.plot_tri_prior_post(tris, results)
 
 #na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
@@ -323,6 +335,8 @@ if save_results
     #        Oiler.IO.poles_to_df(na_rel_poles, convert_to_sphere=true))
 end
 
-Oiler.WebViewer.write_web_viewer(results=results, block_df=block_df,
-                                 directory="../web_viewer", ref_pole="na")
+#Oiler.WebViewer.write_web_viewer(results=results, block_df=block_df,
+#                                 directory="../web_viewer", ref_pole="na")
 println("done")
+
+#show()
