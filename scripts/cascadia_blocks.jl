@@ -322,9 +322,9 @@ if save_results
 end
 
 Oiler.Plots.plot_results_map(results, vel_groups, faults, tris)
-#Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
-#                               fault_df, results, usd=:upper_seis_depth,
-#                               lsd=:lower_seis_depth)
+Oiler.Plots.plot_slip_rate_fig(geol_slip_rate_df, geol_slip_rate_vels,
+                               fault_df, results, usd=:upper_seis_depth,
+                               lsd=:lower_seis_depth)
 #Oiler.Plots.plot_tri_prior_post(tris, results)
 
 #na_rel_poles = [Oiler.Utils.get_path_euler_pole(pole_arr, "na",
@@ -339,4 +339,4 @@ end
 #                                 directory="../web_viewer", ref_pole="na")
 println("done")
 
-#show()
+show()
